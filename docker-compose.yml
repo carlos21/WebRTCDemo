@@ -1,0 +1,62 @@
+version: '3'
+services:
+
+  mongodb:
+    container_name: mongodb
+    image: mongo:latest
+    restart: always
+    command: ["--bind_ip_all"]
+    volumes:
+      - ./SignalingServer/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+      - ./mongo-volume:/data/db
+    ports:
+      - 27017:27017
+    networks:
+      - backend
+
+  signaling_server:
+    container_name: signaling_server
+    build:
+      context: .
+      dockerfile: ./SignalingServer/Dockerfile
+    volumes:
+      - ./SignalingServer:/usr/src/app
+    ports:
+      - 9000:9000
+    links:
+      - mongodb
+      # - redis
+    depends_on:
+      - mongodb
+      # - redis
+    networks:
+      - backend
+
+  # redis:
+  #   container_name: redis
+  #   build:
+  #     context: .
+  #     dockerfile: ./server/Dockerfile-redis
+  #   ports:
+  #     - 6379:6379
+  #   volumes:
+  #     - ./server/config/redis.conf:/etc/redis/redis.conf
+  #   networks:
+  #     - backend
+
+  # videoconference_app:
+  #   container_name: videoconference_app
+  #   stdin_open: true
+  #   # tty: true
+  #   build:
+  #     context: .
+  #     dockerfile: ./video-conference/Dockerfile
+  #   volumes:
+  #     - ./video-conference:/usr/src/app
+  #   ports:
+  #     - 4000:4000
+  #   networks:
+  #     - backend
+
+networks:
+    backend:

@@ -1,0 +1,36 @@
+.mainContainer {
+  flex: 1;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: row;
+}
+
+.leftPanel {
+  display: flex;
+  flex-grow: 1;
+  height: 100%;
+  background-color: #92a8d1;
+  position: relative;
+}
+
+.rightPanel {
+  display: flex;
+  width: 300px;
+  height: 100%;
+  background-color: #92a451;
+}
+
+.remoteVideo {
+  background-color: #000000;
+  object-fit: 'cover';
+}
+
+.localVideo {
+  background-color: #444433;
+  object-fit: cover;
+  position: absolute;
+  border-radius: 20px;
+  right: 16px;
+  top: 16px;
+}

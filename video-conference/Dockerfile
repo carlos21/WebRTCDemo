@@ -1,0 +1,19 @@
+FROM node:14.0.0-alpine3.10
+
+WORKDIR /usr/src/app
+
+# add `/app/node_modules/.bin` to $PATH
+ENV PATH /usr/src/app/node_modules/.bin:$PATH
+
+COPY ./video-conference/package.json ./
+
+RUN yarn install
+
+# If you are building your code for production
+# RUN npm ci --only=production
+
+COPY . .
+
+EXPOSE 4000
+
+ENTRYPOINT [ "yarn", "start"]

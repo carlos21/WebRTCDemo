@@ -1,0 +1,11 @@
+FROM redis:6.0-rc3
+
+WORKDIR /
+
+COPY ./server/config/redis.conf /etc/redis/redis.conf
+
+COPY . .
+
+EXPOSE 6379
+
+ENTRYPOINT [ "redis-server", "/etc/redis/redis.conf"]
