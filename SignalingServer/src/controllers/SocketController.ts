@@ -2,7 +2,7 @@ import SocketIO from 'socket.io';
 import socketAuth from 'socketio-jwt-auth';
 import config from '../config/config';
 import { Repository } from 'typeorm';
-import { User } from '../entity/User';
+import { User } from '../storage/entity/User';
 import { Server } from 'http';
 
 export default class SocketController {

@@ -5,21 +5,16 @@ import SocketController from './controllers/SocketController';
 import loggerMiddleware from './middleware/logger'
 import bodyParser from "body-parser";
 import { getRepository, createConnection } from 'typeorm';
-import { User } from './entity/User';
-import { Server } from 'http';
+import { User } from './storage/entity/User';
 
 createConnection().then(async connection => {
   await connection.runMigrations();
 }).then(() => {
   const userRepo = getRepository(User);
-  const app = express();
-  const server = new Server(app);
-  
-  const application = new App(app, server, {
+  const application = new App({
     port: 9000,
     controllers: [
-      new AuthorizeController(userRepo),
-      new SocketController(server, userRepo)
+      new AuthorizeController(userRepo)
     ],
     middleWares: [
       bodyParser.json(),

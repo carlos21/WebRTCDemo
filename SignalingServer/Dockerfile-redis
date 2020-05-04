@@ -1,0 +1,9 @@
+FROM redis:6.0-rc3
+
+WORKDIR /
+
+COPY ./SignalingServer/config/redis.conf /etc/redis/redis.conf
+
+EXPOSE 6379
+
+ENTRYPOINT [ "redis-server", "/etc/redis/redis.conf"]

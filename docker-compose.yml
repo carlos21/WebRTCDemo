@@ -14,6 +14,18 @@ services:
     networks:
       - backend
 
+  redis:
+    container_name: redis
+    build:
+      context: .
+      dockerfile: ./SignalingServer/Dockerfile-redis
+    ports:
+      - 6379:6379
+    volumes:
+      - ./SignalingServer/config/redis.conf:/etc/redis/redis.conf
+    networks:
+      - backend
+
   signaling_server:
     container_name: signaling_server
     build:
@@ -25,38 +37,26 @@ services:
       - 9000:9000
     links:
       - mongodb
-      # - redis
+      - redis
     depends_on:
       - mongodb
-      # - redis
+      - redis
     networks:
       - backend
 
-  # redis:
-  #   container_name: redis
-  #   build:
-  #     context: .
-  #     dockerfile: ./server/Dockerfile-redis
-  #   ports:
-  #     - 6379:6379
-  #   volumes:
-  #     - ./server/config/redis.conf:/etc/redis/redis.conf
-  #   networks:
-  #     - backend
-
-  # videoconference_app:
-  #   container_name: videoconference_app
-  #   stdin_open: true
-  #   # tty: true
-  #   build:
-  #     context: .
-  #     dockerfile: ./video-conference/Dockerfile
-  #   volumes:
-  #     - ./video-conference:/usr/src/app
-  #   ports:
-  #     - 4000:4000
-  #   networks:
-  #     - backend
+  videoconference_app:
+    container_name: videoconference_app
+    stdin_open: true
+    # tty: true
+    build:
+      context: .
+      dockerfile: ./video-conference/Dockerfile
+    volumes:
+      - ./video-conference:/usr/src/app
+    ports:
+      - 4000:4000
+    networks:
+      - backend
 
 networks:
     backend:

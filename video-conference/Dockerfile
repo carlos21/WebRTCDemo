@@ -12,7 +12,7 @@ RUN yarn install
 # If you are building your code for production
 # RUN npm ci --only=production
 
-COPY . .
+COPY ./video-conference .
 
 EXPOSE 4000
 

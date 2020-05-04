@@ -1,6 +1,6 @@
 import Config from "./Config";
 
-const serverURI = process.env.SIGNALING_SERVER_URI as string;
+const serverURI = process.env.REACT_APP_SIGNALING_SERVER_URI as string;
 const rtcConfig: RTCConfiguration = {
   iceServers: [
     { 'urls': 'stun:stun.services.mozilla.com' },
@@ -10,7 +10,6 @@ const rtcConfig: RTCConfiguration = {
 
 const config: Config = {
   uri: serverURI,
-  roomId: "123456",
   rtcConfig: rtcConfig,
   streamConstraints: {
     audio: true,

@@ -7,13 +7,13 @@
     "database": "signaling_db",
     "synchronize": true,
     "entities": [
-        "src/entity/*.ts"
+        "src/storage/entity/*.ts"
     ],
     "migrations": [
         "src/migrations/*.ts"
     ],
     "cli": {
-        "entitiesDir": "src/entity",
+        "entitiesDir": "src/storage/entity",
         "migrationsDir": "src/migrations"
     }
 }

@@ -1,9 +1,10 @@
 enum SocketEvent {
-  Authorized = "authorized",
+  JoinedRoom = "joined",
   Unauthorized = "unauthorized",
   Disconnected = "disconnected",
   ReceivedStream = "receivedStream",
-  Message = "message"
+  Message = "message",
+  ConfirmNewSession = "confirmnewsession"
 }
 
 export default SocketEvent;

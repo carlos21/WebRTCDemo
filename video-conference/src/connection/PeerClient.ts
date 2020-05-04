@@ -1,94 +1,97 @@
-import io from 'socket.io-client';
 import SocketEvent from './SocketEvent';
 import IceCandidateEvent from './IceCandidateEvent';
 import Config from './Config';
 import OfferEvent from './OfferEvent';
 import AnswerEvent from './AnswerEvent';
+import io from 'socket.io-client';
+import ErrorResponse from '../responses/ErrorResponse';
+import ErrorDataResponse from '../responses/ErrorDataResponse';
 
 export default class PeerClient {
 
   // Properties
 
   config: Config;
-  name: string;
-  socket: SocketIOClient.Socket;
+  token: string;
+  room: string;
+  io: SocketIOClient.Socket;
   peerConnection?: RTCPeerConnection;
   localStream: MediaStream;
   remoteStream?: MediaStream;
 
-  authorizedCallback = (payload?: any) => { };
+  joinedRoomCallback = (payload?: any) => { };
   unauthorizedCallback = (payload?: any) => { };
   disconnectedCallback = (payload?: any) => { };
   receivedStreamCallback = (payload?: any) => { };
+  confirmNewSessionCallback = (payload?: any) => { };
 
   // Initialize
 
-  constructor(config: Config, name: string, localStream: MediaStream) {
+  constructor(config: Config, username: string, room: string, token: string, localStream: MediaStream, force: boolean = false) {
     this.config = config;
-    this.name = name;
+    this.room = room;
+    this.token = token;
     this.localStream = localStream;
-    this.socket = io(config.uri);
+    this.io = io(config.uri, { query: `auth_token=${token}&username=${username}&room=${room}&force=${force}` });
     this.registerEvents();
   }
 
   // Internal methods
 
   private registerEvents = () => {
-    this.socket.on("connect", () => {
-      console.log("Connected");
-
-      this.socket.emit("authentication", {
-        name: this.name,
-      });
+    this.io.on("connect", (socket: any) => {
+      console.log("Connected socket");
+      console.log(socket);
     });
 
-    this.socket.on("unauthorized", (reason: string) => {
+    this.io.on("unauthorized", (reason: string) => {
       console.log("Unauthorized: ", reason);
-      this.socket.disconnect();
+      this.io.disconnect();
       this.fire(SocketEvent.Unauthorized);
     });
-
-    this.socket.on("authorized", () => {
-      this.fire(SocketEvent.Authorized);
-    });
-
-    this.socket.on("disconnect", (reason: string) => {
-      console.log(`Disconnected: ${reason}`);
-      this.fire(SocketEvent.Disconnected);
-    });
-
-    this.socket.on("joined", (room: string) => {
+ 
+    this.io.on("joined", (room: string) => {
       console.log(`Joined to room ${room}`);
-      this.socket.emit("ready", room);
+      this.createPeerConnection();
+      this.createOffer();
+      this.fire(SocketEvent.JoinedRoom);
     });
 
-    this.socket.on("ready", () => {
-      console.log(`Ready`);
-
-      if (this.config.isCaller) {
-        this.createPeerConnection();
-        this.createOffer();
-      }
-    });
-
-    this.socket.on('offer', (sdp: RTCSessionDescriptionInit) => {
+    this.io.on('offer', (sdp: RTCSessionDescriptionInit) => {
       console.log('Received Offer', sdp);
       this.createPeerConnection();
       this.createAnswer(sdp);
     });
 
-    this.socket.on('answer', (sdp: RTCSessionDescriptionInit) => {
+    this.io.on('answer', (sdp: RTCSessionDescriptionInit) => {
       console.log('Received Answer', sdp);
       this.peerConnection?.setRemoteDescription(new RTCSessionDescription(sdp));
     });
 
-    this.socket.on('candidate', (event: IceCandidateEvent) => {
+    this.io.on('candidate', (event: IceCandidateEvent) => {
       const candidate = new RTCIceCandidate({
         sdpMLineIndex: event.sdpMLineIndex,
         candidate: event.candidate
       });
       console.log('Received Candidate', candidate);
       this.peerConnection?.addIceCandidate(candidate);
+    });
+
+    this.io.on("disconnect", (reason: string) => {
+      console.log(`Disconnected: ${reason}`);
+      this.fire(SocketEvent.Disconnected);
+    });
+
+    this.io.on('customerror', (response: any) => {
+      console.log('Custom error', response);
+    });
+
+    this.io.on('error', (response: ErrorResponse) => {
+      const data = response.data as ErrorDataResponse;
+      if (data.show) {
+        this.fire(SocketEvent.ConfirmNewSession, data.message);
+      }
+      console.log("error", response);
     });
   }
 
@@ -108,9 +111,9 @@ export default class PeerClient {
         sdpMLineIndex: event.candidate.sdpMLineIndex,
         sdpMid: event.candidate.sdpMid,
         candidate: event.candidate.candidate,
-        room: this.config.roomId
+        room: this.room
       }
-      this.socket.emit('candidate', data);
+      this.io.emit('candidate', data);
     }
   };
 
@@ -132,9 +135,9 @@ export default class PeerClient {
         const data: OfferEvent = {
           type: "offer",
           sdp: sessionDescription,
-          room: this.config.roomId 
+          room: this.room 
         }
-        this.socket.emit("offer", data);
+        this.io.emit("offer", data);
       })
       .catch((error) => {
         console.log("An error ocurred - createPeerConnection", error);
@@ -152,9 +155,9 @@ export default class PeerClient {
         const data: AnswerEvent = {
           type: "answer",
           sdp: sessionDescription,
-          room: this.config.roomId,
+          room: this.room,
         }
-        this.socket.emit("answer", data);
+        this.io.emit("answer", data);
       })
       .catch((error) => {
         console.log("An error ocurred creating answer", error);
@@ -163,8 +166,13 @@ export default class PeerClient {
 
   private fire = (event: SocketEvent, payload?: any) => {
     switch (event) {
-      case SocketEvent.Authorized: {
-        this.authorizedCallback(payload);
+      case SocketEvent.JoinedRoom: {
+        this.joinedRoomCallback(payload);
+        break;
+      }
+
+      case SocketEvent.ConfirmNewSession: {
+        this.confirmNewSessionCallback(payload);
         break;
       }
       case SocketEvent.Unauthorized: {
@@ -185,13 +193,17 @@ export default class PeerClient {
   // Public methods
 
   public authenticate = () => {
-    this.socket.open();
+    this.io.connect();
   }
 
   public on = (event: SocketEvent, callback: (payload?: any) => void) => {
     switch (event) {
-      case SocketEvent.Authorized: {
-        this.authorizedCallback = callback;
+      case SocketEvent.JoinedRoom: {
+        this.joinedRoomCallback = callback;
+        break;
+      }
+      case SocketEvent.ConfirmNewSession: {
+        this.confirmNewSessionCallback = callback;
         break;
       }
       case SocketEvent.Unauthorized: {

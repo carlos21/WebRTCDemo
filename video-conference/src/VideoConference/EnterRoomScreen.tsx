@@ -1,11 +1,13 @@
 import React, { Component, createRef } from 'react';
 import PeerClient from '../connection/PeerClient';
 import * as constants from '../constants';
-import { config, serverURI } from '../connection/Constants';
+import { config } from '../connection/Constants';
 import { RouteComponentProps } from 'react-router';
 import SocketContext from '../SocketContext';
 import SocketEvent from '../connection/SocketEvent';
 import LoadingStatus from './LoadingStatus';
+import LoginService from '../services/LoginService';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface MatchParams {
   room: string;
@@ -17,6 +19,9 @@ interface Props extends RouteComponentProps<MatchParams> {
 
 interface State {
   name: string;
+  confirmTitle: string;
+  confirmBody: string;
+  confirmVisible: boolean;
   cameraStatus: LoadingStatus;
   authorizationStatus: LoadingStatus;
 }
@@ -26,6 +31,7 @@ export default class EnterRoomScreen extends Component<Props, State> {
   // Properties
 
   peer?: PeerClient;
+  loginService: LoginService;
 
   containerDiv = createRef<HTMLDivElement>();
   localVideo = createRef<HTMLVideoElement>();
@@ -42,13 +48,16 @@ export default class EnterRoomScreen extends Component<Props, State> {
     this.state = {
       cameraStatus: LoadingStatus.Idle,
       authorizationStatus: LoadingStatus.Idle,
-      name: 'Carlos'
+      name: 'cduclos',
+      confirmTitle: 'Confirm',
+      confirmBody: '',
+      confirmVisible: false
     }
+
+    this.loginService = new LoginService();
   }
 
-  componentDidMount = () => {
-    console.log('EnterRoomScreen - componentDidMount');
-    console.log(serverURI);
+  componentDidMount = () => { 
     this.requestPermission();
     console.log('Room:', this.props.match.params.room);
   }
@@ -70,16 +79,32 @@ export default class EnterRoomScreen extends Component<Props, State> {
       });
   }
 
-  startConnection = (localStream: MediaStream, context: any) => {
-    this.peer = new PeerClient(config, this.nameInputText.current!.value, localStream);
-    this.peer.on(SocketEvent.Authorized, this.onAuthorized);
-    this.peer.on(SocketEvent.Unauthorized, this.onUnauthorized);
-    this.peer.authenticate();
-    context.setPeer(this.peer);
+  startConnection = (localStream: MediaStream, context: any, force: boolean) => {
+    const username = this.nameInputText.current!.value;
+    const room = this.props.match.params.room;
+    this.loginService.login(username, result => {
+      this.peer = new PeerClient(config, username, room, result.token, localStream, force);
+      this.peer.on(SocketEvent.JoinedRoom, this.onJoinedRoom);
+      this.peer.on(SocketEvent.ConfirmNewSession, this.onShowConfirmNewSession);
+      this.peer.on(SocketEvent.Unauthorized, this.onUnauthorized);
+      this.peer.authenticate();
+      context.setPeer(this.peer);
+    }, error => {
+      console.log(":(  ", error);
+    });
   }
 
-  onAuthorized = () => {
-    console.log('onAuthorized');
+  onShowConfirmNewSession = (payload: string) => {
+    console.log("onShowConfirmNewSession");
+    this.setState({
+      confirmTitle: "Confirm",
+      confirmBody: payload,
+      confirmVisible: true
+    });
+  }
+
+  onJoinedRoom = () => {
+    console.log('onJoinedRoom');
     const room = this.props.match.params.room;
     this.props.history.push(`/room/${room}`);
   }
@@ -90,12 +115,24 @@ export default class EnterRoomScreen extends Component<Props, State> {
 
   onJoinPressed = (context: any) => {
     if (this.localStream) {
-      this.startConnection(this.localStream, context);
+      this.startConnection(this.localStream, context, false);
     }
   }
 
   onNameChanged = (event: React.ChangeEvent<HTMLInputElement>) => {
     this.setState({ name: event.target.value });
+  }
+
+  onConfirmPressed = () => {
+    if (this.localStream) {
+      this.startConnection(this.localStream, this.context, true);
+    }
+  }
+
+  onCancel = () => {
+    this.setState({
+      confirmVisible: false
+    });
   }
 
   // Render
@@ -153,10 +190,19 @@ export default class EnterRoomScreen extends Component<Props, State> {
             </div>
           </div>
         </div>
+
+        <ConfirmModal
+          title={this.state.confirmTitle}
+          body={this.state.confirmBody}
+          onConfirm={this.onConfirmPressed}
+          onCancel={this.onCancel}
+          visible={this.state.confirmVisible} />
       </div>
     )
   }
 }
+
+EnterRoomScreen.contextType = SocketContext;
 
 const mainContainer: React.CSSProperties = {
   flex: 1,

@@ -51,14 +51,19 @@ export default class ConferenceScreen extends Component<Props> {
   onStreamReceived = (remoteStream: MediaStream) => {
     console.log("onReceivedStream");
     this.remoteStream = remoteStream;
-    this.remoteVideo.current!.srcObject = remoteStream;
+
+    if (this.remoteVideo.current) {
+      this.remoteVideo.current.srcObject = remoteStream;
+    }
   }
 
   requestPermission = () => {
     navigator.mediaDevices.getUserMedia(constants.streamConstraints)
       .then(stream => {
         this.localStream = stream;
-        this.localVideo.current!.srcObject = stream;
+        if (this.localVideo.current) {
+          this.localVideo.current.srcObject = stream;
+        }
       })
       .catch(error => {
         console.log('An error occurred');

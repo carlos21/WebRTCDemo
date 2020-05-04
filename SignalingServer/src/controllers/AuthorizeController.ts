@@ -2,7 +2,7 @@ import express from 'express';
 import jwt from "jsonwebtoken";
 import config from "../config/config";
 import { Repository } from "typeorm";
-import { User } from '../entity/User';
+import { User } from '../storage/entity/User';
 import RoutableController from './RoutableController';
 
 export default class AuthorizeController implements RoutableController {
@@ -21,9 +21,8 @@ export default class AuthorizeController implements RoutableController {
   }
 
   authorize = async (request: express.Request, response: express.Response) => {
-    const { username } = request.body;
-
     try {
+      const { username } = request.body;
 
       // find user
       const user = await this.userRepo.findOneOrFail({ where: { username: username }});
@@ -33,7 +32,8 @@ export default class AuthorizeController implements RoutableController {
         userId: user.id,
         username: user.username
       }, config.jwtSecret, { expiresIn: "1h" });
-      response.send(token);
+      
+      response.send({ token: token });
 
     } catch (error) {
       console.log(error);
