@@ -2,18 +2,19 @@ FROM node:14.0.0-alpine3.10
 
 WORKDIR /usr/src/app
 
-COPY ./server/package*.json ./
-COPY ./server/config/redis.conf /etc/redis/redis.conf
+COPY ./SignalingServer/package*.json ./
+COPY ./SignalingServer/src/config/redis.conf /etc/redis/redis.conf
 
 RUN yarn install
+RUN yarn global add ts-node typescript
 
 # If you are building your code for production
 # RUN npm ci --only=production
 
-COPY . .
+COPY ./SignalingServer .
 
 EXPOSE 9000
 
 ENV REDIS_PASS 86a2fa7bbc75b6f56fbf2ca8f09bde1bb3e9f2db
 
-ENTRYPOINT [ "yarn", "start"]
+ENTRYPOINT [ "yarn", "run", "prod"]

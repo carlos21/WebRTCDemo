@@ -2,7 +2,7 @@
   "scripts": {
     "tsc": "tsc",
     "dev": "nodemon ./src/server.ts",
-    "prod": "tsc && node ./dist/server.js"
+    "prod": "NODE_ENV=production ts-node ./src/server.ts"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.2",

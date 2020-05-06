@@ -26,11 +26,43 @@ services:
     networks:
       - backend
 
-  signaling_server:
-    container_name: signaling_server
+  # signaling_server:
+  #   container_name: signaling_server
+  #   build:
+  #     context: .
+  #     dockerfile: ./SignalingServer/Dockerfile-signalingserver.dev
+  #   volumes:
+  #     - ./SignalingServer:/usr/src/app
+  #   ports:
+  #     - 9000:9000
+  #   links:
+  #     - mongodb
+  #     - redis
+  #   depends_on:
+  #     - mongodb
+  #     - redis
+  #   networks:
+  #     - backend
+
+  # videoconference_app:
+  #   container_name: videoconference_app
+  #   stdin_open: true
+  #   # tty: true
+  #   build:
+  #     context: .
+  #     dockerfile: ./video-conference/Dockerfile
+  #   volumes:
+  #     - ./video-conference:/usr/src/app
+  #   ports:
+  #     - 80:80
+  #   networks:
+  #     - backend
+
+  signaling_server_prod:
+    container_name: signaling_server_prod
     build:
       context: .
-      dockerfile: ./SignalingServer/Dockerfile
+      dockerfile: ./SignalingServer/Dockerfile-signalingserver.prod
     volumes:
       - ./SignalingServer:/usr/src/app
     ports:
@@ -44,19 +76,15 @@ services:
     networks:
       - backend
 
-  videoconference_app:
-    container_name: videoconference_app
+  videoconference_app_prod:
+    container_name: videoconference_app_prod
     stdin_open: true
     # tty: true
     build:
       context: .
-      dockerfile: ./video-conference/Dockerfile
-    volumes:
-      - ./video-conference:/usr/src/app
+      dockerfile: ./video-conference/Dockerfile.prod
     ports:
-      - 4000:4000
-    networks:
-      - backend
+      - 80:80
 
 networks:
     backend:

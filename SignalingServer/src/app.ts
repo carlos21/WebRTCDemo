@@ -6,14 +6,12 @@ import { Application } from 'express';
 import http from 'http';
 import RoutableController from './controllers/RoutableController';
 import SocketIO from 'socket.io';
-import socketAuth from 'socketio-jwt-auth';
 import config from './config/config';
 import redisClient from './storage/Redis';
 import { getRepository } from 'typeorm';
 import { User } from './storage/entity/User';
 import jwt, { TokenExpiredError } from 'jsonwebtoken';
 import TokenPayloadInterface from './models/TokenPayloadInterface';
-import ResponseError from './responses/ResponseError';
 import SocketResponse from './responses/SocketResponse';
 
 export default class App {

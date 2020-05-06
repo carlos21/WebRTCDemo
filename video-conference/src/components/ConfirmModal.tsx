@@ -16,9 +16,6 @@ interface Props {
 
 export default class ConfirmModal extends Component<Props, State> {
 
-  constructor(props: Props) {
-    super(props);
-  }
   render = () => {
     return (
       <Modal animation={false} show={this.props.visible} onHide={this.props.onDismiss}>
