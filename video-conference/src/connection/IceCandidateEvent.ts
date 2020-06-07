@@ -4,4 +4,5 @@ export default interface IceCandidateEvent {
   sdpMid: string | null;
   candidate: string;
   room: string;
+  socketId: string;
 }

@@ -1,0 +1,28 @@
+FROM mongo:latest
+
+WORKDIR /
+
+COPY ./SignalingServer/init-mongo.js /docker-entrypoint-initdb.d/init-mongo.js
+
+EXPOSE 27017
+
+CMD ["mongod"]
+
+
+# FROM alpine:3.7
+
+# WORKDIR /
+
+# COPY ./SignalingServer/init-mongo.js /docker-entrypoint-initdb.d/init-mongo.js
+
+# RUN echo 'http://dl-cdn.alpinelinux.org/alpine/v3.6/main' >> /etc/apk/repositories
+# RUN echo 'http://dl-cdn.alpinelinux.org/alpine/v3.6/community' >> /etc/apk/repositories
+
+# RUN apk update
+# RUN apk add mongodb=3.4.4-r0
+
+# VOLUME [ "/data/db" ]
+
+# EXPOSE 27017
+
+# ENTRYPOINT [ "mongod" ]

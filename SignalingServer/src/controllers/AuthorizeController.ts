@@ -7,7 +7,7 @@ import RoutableController from './RoutableController';
 
 export default class AuthorizeController implements RoutableController {
 
-  private path = '/authorize';
+  private path = '/api/authorize';
   private userRepo: Repository<User>;
   router = express.Router();
 
@@ -33,11 +33,11 @@ export default class AuthorizeController implements RoutableController {
         username: user.username
       }, config.jwtSecret, { expiresIn: "1h" });
       
-      response.send({ token: token });
+      response.json({ token: token });
 
     } catch (error) {
       console.log(error);
-      response.status(401).send();
+      response.status(401).json({ success: false, message: "The username does not exist." });
     }
   }
 }

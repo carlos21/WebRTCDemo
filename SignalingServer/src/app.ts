@@ -5,7 +5,7 @@ import bodyParser from "body-parser";
 import { Application } from 'express';
 import http from 'http';
 import RoutableController from './controllers/RoutableController';
-import SocketIO from 'socket.io';
+import SocketIO, { Socket } from 'socket.io';
 import config from './config/config';
 import redisClient from './storage/Redis';
 import { getRepository } from 'typeorm';
@@ -24,7 +24,9 @@ export default class App {
     this.app = express();
     this.server = new http.Server(this.app);
     this.io = SocketIO();
-    this.io.attach(this.server);
+    this.io.attach(this.server, {
+      path: '/socket.io'
+    });
 
     this.app.use(cors());
     this.app.use(helmet());
@@ -65,7 +67,16 @@ export default class App {
   }
 
   public listen() {
-    this.server.listen(this.port);
+    this.server.listen(this.port, '0.0.0.0', () => {
+      console.log(`Server is listening on ${this.port} port`);
+    });
+  }
+
+  private printUser(socket: Socket) {
+    const token = socket.request._query.auth_token;
+    const payload = jwt.verify(token, config.jwtSecret) as TokenPayloadInterface;
+    const username = payload.username;
+    console.log("user: ", username);
   }
 
   private listenSocketEvents = () => {
@@ -74,25 +85,58 @@ export default class App {
       const room = socket.handshake.query.room;
       console.log(`Connection`);
       console.log(`auth_token`, auth_token);
+      console.log(`room`, room);
       console.log(`Requesting to join to room`, room);
       
-      socket.join(room, () => {
-        socket.emit('joined', room);
-      });
-
-      socket.on('candidate', (event: any) => {
-        console.log(`Candidate ${event}`);
-        socket.to(event.room).emit('candidate', event);
+      socket.join(room, (error) => {
+        if (error) {
+          console.log('Error when joining', error);
+          
+          const json = { status: 2, data: {} };
+          socket.emit('error', json);
+          return;
+        }
+        socket.emit('joined', { room: room, socketId: socket.id });
       });
 
       socket.on('offer', (event: any) => {
-        console.log(`Offer ${event.sdp}`);
+        console.log(`>>>>>> Offer ${event.sdp}`);
+        this.printUser(socket);
         socket.to(event.room).emit('offer', event.sdp);
+        console.log('>>>>>>');
+        console.log("");
       });
 
       socket.on('answer', (event: any) => {
-        console.log(`Answer ${event.sdp}`);
+        console.log(`>>>>>> Answer ${event.sdp}`);
+        this.printUser(socket);
         socket.to(event.room).emit('answer', event.sdp);
+        console.log('>>>>>>');
+        console.log("");
+      });
+
+      socket.on('candidate', (event: any) => {
+        console.log(`>>>>>> Candidate ${event}`);
+        this.printUser(socket);
+        console.log('>>>>>>');
+        console.log("");
+        const json = {
+          type: 'candidate',
+          sdpMLineIndex: event.sdpMLineIndex,
+          sdpMid: event.sdpMid,
+          candidate: event.candidate
+        };
+        socket.to(event.room).emit('candidate', json);
+      });
+
+      socket.on('mute-video', (event: any) => {
+        console.log(`mute-video ${event.enabled}`);
+        socket.to(event.room).emit('mute-video', event.enabled);
+      });
+
+      socket.on('mute-audio', (event: any) => {
+        console.log(`mute-audio ${event.enabled}`);
+        socket.to(event.room).emit('mute-audio', event.enabled);
       });
 
       socket.conn.on('packet', async (packet: any) => {
@@ -160,7 +204,7 @@ export default class App {
           const error = SocketResponse.buildError("Already logged in", { status: 1, data: {
             show: true,
             message: "You already have an open session in other device. Do you want to close that session and start a new one?"
-          } });
+          }});
           return next(error);
         }
 

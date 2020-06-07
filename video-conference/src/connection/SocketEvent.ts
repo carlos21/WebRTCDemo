@@ -4,7 +4,9 @@ enum SocketEvent {
   Disconnected = "disconnected",
   ReceivedStream = "receivedStream",
   Message = "message",
-  ConfirmNewSession = "confirmnewsession"
+  ConfirmNewSession = "confirmnewsession",
+  RemoteAudioMuted = "muted-audio",
+  RemoteVideoMuted = "muted-video",
 }
 
 export default SocketEvent;

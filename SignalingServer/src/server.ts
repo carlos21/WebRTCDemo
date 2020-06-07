@@ -6,10 +6,22 @@ import loggerMiddleware from './middleware/logger'
 import bodyParser from "body-parser";
 import { getRepository, createConnection } from 'typeorm';
 import { User } from './storage/entity/User';
+import promiseRetry from 'promise-retry';
 
-createConnection().then(async connection => {
-  await connection.runMigrations();
+promiseRetry((retry: (error: any) => never, attempts: number) => {
+
+  console.log("STARTING THE CONNECTION");
+  console.log('attempt number', attempts);
+  
+  return createConnection().catch(retry);
+
+}, { retries: 5, minTimeout: 10000 }).then(connection => {
+
+  console.log("RUNNING MIGRATIONS");
+  return connection.runMigrations();
+  
 }).then(() => {
+  
   const userRepo = getRepository(User);
   const application = new App({
     port: 9000,
@@ -22,8 +34,9 @@ createConnection().then(async connection => {
       loggerMiddleware
     ]
   });
-
+  console.log("STARTING THE APP");
   application.listen();
+
 }).catch(error => {
-  console.log("Error starting app", error);
+  console.log("ERROR STARTING THE APP", error);
 });

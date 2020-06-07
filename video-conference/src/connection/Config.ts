@@ -5,4 +5,5 @@ export default interface Config {
   rtcConfig: RTCConfiguration;
   streamConstraints: StreamConstraints;
   isCaller: boolean;
+  socketPath: string;
 }

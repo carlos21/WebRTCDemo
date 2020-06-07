@@ -1,8 +1,8 @@
 {
   "name": "video-conference",
   "version": "0.1.0",
-  "homepage": "http://localhost",
-  "proxy": "http://carlosduclos.dev",
+  "homepage": "https://carlosduclos.dev",
+  "proxy": "https://carlosduclos.dev",
   "private": true,
   "dependencies": {
     "@emotion/core": "^10.0.28",
@@ -21,6 +21,7 @@
     "@types/socket.io": "^2.1.4",
     "@types/socket.io-client": "^1.4.32",
     "bootstrap": "^4.4.1",
+    "env-cmd": "^10.1.0",
     "express": "^4.17.1",
     "express-favicon": "^2.0.1",
     "path": "^0.12.7",
@@ -33,13 +34,15 @@
     "serve": "^11.3.0",
     "socket.io": "^2.3.0",
     "socket.io-client": "^2.3.0",
-    "typescript": "^3.8.3"
+    "typescript": "^3.8.3",
+    "typestyle": "^2.1.0"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "build:prod": "env-cmd -f .env.production react-scripts build"
   },
   "eslintConfig": {
     "extends": "react-app"

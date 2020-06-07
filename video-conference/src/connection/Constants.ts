@@ -15,7 +15,8 @@ const config: Config = {
     audio: true,
     video: true
   },
-  isCaller: true
+  isCaller: true,
+  socketPath: process.env.REACT_APP_SOCKET_PATH as string
 }
 
 export { config, rtcConfig, serverURI };

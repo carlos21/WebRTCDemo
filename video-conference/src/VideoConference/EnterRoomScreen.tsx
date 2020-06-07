@@ -8,6 +8,8 @@ import SocketEvent from '../connection/SocketEvent';
 import LoadingStatus from './LoadingStatus';
 import LoginService from '../services/LoginService';
 import ConfirmModal from '../components/ConfirmModal';
+import { style } from 'typestyle';
+import { NestedCSSProperties } from 'typestyle/lib/types';
 
 interface MatchParams {
   room: string;
@@ -19,6 +21,8 @@ interface Props extends RouteComponentProps<MatchParams> {
 
 interface State {
   name: string;
+  isVideoEnabled: boolean;
+  isAudioEnabled: boolean;
   confirmTitle: string;
   confirmBody: string;
   confirmVisible: boolean;
@@ -49,6 +53,8 @@ export default class EnterRoomScreen extends Component<Props, State> {
       cameraStatus: LoadingStatus.Idle,
       authorizationStatus: LoadingStatus.Idle,
       name: 'cduclos',
+      isVideoEnabled: true,
+      isAudioEnabled: true,
       confirmTitle: 'Confirm',
       confirmBody: '',
       confirmVisible: false
@@ -57,12 +63,20 @@ export default class EnterRoomScreen extends Component<Props, State> {
     this.loginService = new LoginService();
   }
 
-  componentDidMount = () => { 
+  componentDidMount = () => {  
     this.requestPermission();
     console.log('Room:', this.props.match.params.room);
   }
 
   // Methods
+
+  getAudioTrack = (): MediaStreamTrack | undefined => {
+    return this.localStream?.getTracks().find(track => track.kind === 'audio')
+  }
+
+  getVideoTrack = (): MediaStreamTrack | undefined => {
+    return this.localStream?.getTracks().find(track => track.kind === 'video')
+  }
 
   requestPermission = () => {
     this.setState({ cameraStatus: LoadingStatus.Loading });
@@ -95,7 +109,6 @@ export default class EnterRoomScreen extends Component<Props, State> {
   }
 
   onShowConfirmNewSession = (payload: string) => {
-    console.log("onShowConfirmNewSession");
     this.setState({
       confirmTitle: "Confirm",
       confirmBody: payload,
@@ -106,7 +119,11 @@ export default class EnterRoomScreen extends Component<Props, State> {
   onJoinedRoom = () => {
     console.log('onJoinedRoom');
     const room = this.props.match.params.room;
-    this.props.history.push(`/room/${room}`);
+    console.log("Room", room);
+    this.props.history.push(`/conference/${room}`, { 
+      isAudioEnabled: this.state.isAudioEnabled,
+      isVideoEnabled: this.state.isVideoEnabled
+    });
   }
 
   onUnauthorized = () => {
@@ -135,6 +152,26 @@ export default class EnterRoomScreen extends Component<Props, State> {
     });
   }
 
+  onToggleAudio = () => {
+    const enabled = !this.state.isAudioEnabled;
+    this.setState({ isAudioEnabled: enabled });
+
+    const track = this.getAudioTrack();
+    if (track) {
+      track.enabled = enabled;
+    }
+  }
+
+  onToggleVideo = () => {
+    const enabled = !this.state.isVideoEnabled;
+    this.setState({ isVideoEnabled: enabled });
+
+    const track = this.getVideoTrack();
+    if (track) {
+      track.enabled = enabled;
+    }
+  }
+
   // Render
 
   render = () => {
@@ -148,19 +185,22 @@ export default class EnterRoomScreen extends Component<Props, State> {
               style={video} 
               width="100%"
               height="100%"
-              autoPlay muted>  
+              autoPlay 
+              muted>  
             </video>
 
             <button 
               ref={this.muteAudioButton} 
-              style={{ ...roundButton, ...muteMicrophoneButton}}>
-                A
+              className={muteMicrophoneButton}
+              onClick={this.onToggleAudio}>
+              <i className={`fa fa-${this.state.isAudioEnabled ? "microphone" : "microphone-slash"}` } style={{color: "white"}}></i>
             </button>
 
             <button 
               ref={this.muteVideoButton} 
-              style={{ ...roundButton, ...muteVideoButton }}>
-                B
+              className={muteVideoButton}
+              onClick={this.onToggleVideo}>
+              <i className={`fa fa-${this.state.isVideoEnabled ? "video" : "video-slash"}`} style={{ color: "white" }}></i>
             </button>
 
           </div>
@@ -242,26 +282,39 @@ const video: React.CSSProperties = {
   objectFit: 'cover'
 };
 
-const roundButton: React.CSSProperties = {
+const roundProperties: NestedCSSProperties = {
+  position: 'absolute',
   width: '50px',
   height: '50px',
-  backgroundColor: 'rgb(37, 95, 148)',
-  borderRadius: '25px'
+  backgroundColor: 'transparent',
+  borderColor: 'white',
+  borderRadius: '25px',
+  borderWidth: '2px',
+  "-webkit-border-radius": '25px',
+  bottom: 16,
+  transform: 'translate(-50%, 0)',
+  userSelect: 'none',
+  textDecoration: 'none',
+  $nest: {
+    '&:hover': {
+      backgroundColor: 'rgb(0, 96, 128)',
+    },
+    '&:focus': {
+      outline: 'none'
+    }
+  }
 };
 
-const muteMicrophoneButton: React.CSSProperties = {
-  position: 'absolute',
-  bottom: 16,
-  left: '42%',
-  transform: 'translate(-50%, 0)'
+const muteMicrophoneProperties = {
+  left: '42%' 
 };
 
-const muteVideoButton: React.CSSProperties = {
-  position: 'absolute',
-  bottom: 16,
-  left: '58%',
-  transform: 'translate(-50%, 0)'
+const muteVideoProperties = {
+  left: '58%'
 };
+
+const muteMicrophoneButton = style(roundProperties, muteMicrophoneProperties);
+const muteVideoButton = style(roundProperties, muteVideoProperties);
 
 const button: React.CSSProperties = {
   fontSize: 18,

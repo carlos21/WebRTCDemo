@@ -11,6 +11,7 @@ export default class PeerClient {
 
   // Properties
 
+  socketId?: string;
   config: Config;
   token: string;
   room: string;
@@ -18,12 +19,15 @@ export default class PeerClient {
   peerConnection?: RTCPeerConnection;
   localStream: MediaStream;
   remoteStream?: MediaStream;
+  localVideoRtpSender?: RTCRtpSender;
 
   joinedRoomCallback = (payload?: any) => { };
   unauthorizedCallback = (payload?: any) => { };
   disconnectedCallback = (payload?: any) => { };
   receivedStreamCallback = (payload?: any) => { };
   confirmNewSessionCallback = (payload?: any) => { };
+  mutedRemoteVideoCallback = (payload?: any) => { };
+  mutedRemoteAudioCallback = (payload?: any) => { };
 
   // Initialize
 
@@ -32,7 +36,10 @@ export default class PeerClient {
     this.room = room;
     this.token = token;
     this.localStream = localStream;
-    this.io = io(config.uri, { query: `auth_token=${token}&username=${username}&room=${room}&force=${force}` });
+    this.io = io(config.uri, { 
+      query: `auth_token=${token}&username=${username}&room=${room}&force=${force}`,
+      path: config.socketPath
+    });
     this.registerEvents();
   }
 
@@ -50,22 +57,32 @@ export default class PeerClient {
       this.fire(SocketEvent.Unauthorized);
     });
  
-    this.io.on("joined", (room: string) => {
-      console.log(`Joined to room ${room}`);
-      this.createPeerConnection();
-      this.createOffer();
+    this.io.on("joined", (event: any) => {
+      console.log(`Joined to room ${event.room}`);
+      console.log(event.socketId);
+      this.socketId = event.socketId as string;
       this.fire(SocketEvent.JoinedRoom);
+      this.createOffer();
     });
 
     this.io.on('offer', (sdp: RTCSessionDescriptionInit) => {
       console.log('Received Offer', sdp);
-      this.createPeerConnection();
       this.createAnswer(sdp);
     });
 
     this.io.on('answer', (sdp: RTCSessionDescriptionInit) => {
       console.log('Received Answer', sdp);
       this.peerConnection?.setRemoteDescription(new RTCSessionDescription(sdp));
+    });
+
+    this.io.on('mute-video', (enabled: boolean) => {
+      console.log('Remote video is muted');
+      this.fire(SocketEvent.RemoteVideoMuted, enabled);
+    });
+
+    this.io.on('mute-audio', (enabled: boolean) => {
+      console.log('Remote audio is muted');
+      this.fire(SocketEvent.RemoteAudioMuted, enabled);
     });
 
     this.io.on('candidate', (event: IceCandidateEvent) => {
@@ -111,19 +128,54 @@ export default class PeerClient {
         sdpMLineIndex: event.candidate.sdpMLineIndex,
         sdpMid: event.candidate.sdpMid,
         candidate: event.candidate.candidate,
-        room: this.room
+        room: this.room,
+        socketId: this.socketId!
       }
       this.io.emit('candidate', data);
     }
   };
+
+  private onNegotiationNeeded = (event: Event) => {
+    console.log("onNegotiationNeeded!!!!!");
+    // this.createOffer();
+  }
 
   private createPeerConnection = () => {
     const localStream = this.localStream;
     this.peerConnection = new RTCPeerConnection(this.config.rtcConfig);
     this.peerConnection.onicecandidate = this.onIceCandidate;
     this.peerConnection.ontrack = this.onAddStream;
-    this.peerConnection.addTrack(localStream.getTracks()[0], localStream);
-    this.peerConnection.addTrack(localStream.getTracks()[1], localStream);
+    this.peerConnection.onnegotiationneeded = this.onNegotiationNeeded;
+
+    // const audioTrack = this.getAudioTrack(localStream);
+    // if (audioTrack) {
+    //   this.peerConnection.addTrack(audioTrack, localStream);
+    //   console.log("added audioTrack");
+    // }
+
+    const videoTrack = this.getVideoTrack(localStream);
+    if (videoTrack) {
+      this.localVideoRtpSender = this.peerConnection.addTrack(videoTrack, localStream);
+      console.log("added videoTrack");
+    }
+  }
+
+  // toggleVideo = (enabled: boolean) => {
+  //   const localStream = this.localStream;
+  //   if (enabled) {
+  //     this.localVideoRtpSender = this.peerConnection?.addTrack(localStream.getTracks()[1], localStream);
+  //   } else {
+  //     this.peerConnection?.removeTrack(this.localVideoRtpSender!);
+  //     console.log("REMOVING TRACK CTM");
+  //   }
+  // }
+
+  private getAudioTrack = (stream?: MediaStream): MediaStreamTrack | undefined => {
+    return stream?.getTracks().find(track => track.kind === 'audio')
+  }
+
+  private getVideoTrack = (stream?: MediaStream): MediaStreamTrack | undefined => {
+    return stream?.getTracks().find(track => track.kind === 'video')
   }
 
   private createOffer = () => {
@@ -135,7 +187,8 @@ export default class PeerClient {
         const data: OfferEvent = {
           type: "offer",
           sdp: sessionDescription,
-          room: this.room 
+          room: this.room,
+          socketId: this.socketId!
         }
         this.io.emit("offer", data);
       })
@@ -156,6 +209,7 @@ export default class PeerClient {
           type: "answer",
           sdp: sessionDescription,
           room: this.room,
+          socketId: this.socketId!
         }
         this.io.emit("answer", data);
       })
@@ -170,7 +224,6 @@ export default class PeerClient {
         this.joinedRoomCallback(payload);
         break;
       }
-
       case SocketEvent.ConfirmNewSession: {
         this.confirmNewSessionCallback(payload);
         break;
@@ -187,6 +240,14 @@ export default class PeerClient {
         this.receivedStreamCallback(payload);
         break;
       }
+      case SocketEvent.RemoteAudioMuted: {
+        this.mutedRemoteAudioCallback(payload);
+        break;
+      }
+      case SocketEvent.RemoteVideoMuted: {
+        this.mutedRemoteVideoCallback(payload);
+        break;
+      }
     }
   }
 
@@ -195,6 +256,10 @@ export default class PeerClient {
   public authenticate = () => {
     this.io.connect();
   }
+
+  public emit = (event: string, data: any) => {
+    this.io.emit(event, { room: this.room, enabled: data });
+  };
 
   public on = (event: SocketEvent, callback: (payload?: any) => void) => {
     switch (event) {
@@ -216,6 +281,14 @@ export default class PeerClient {
       }
       case SocketEvent.ReceivedStream: {
         this.receivedStreamCallback = callback;
+        break;
+      }
+      case SocketEvent.RemoteAudioMuted: {
+        this.mutedRemoteAudioCallback = callback;
+        break;
+      }
+      case SocketEvent.RemoteVideoMuted: {
+        this.mutedRemoteVideoCallback = callback;
         break;
       }
     }

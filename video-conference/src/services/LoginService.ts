@@ -9,7 +9,7 @@ export interface TokenResponse {
 
 export default class LoginService {
 
-  private loginUrl = `${serverURI}/authorize`;
+  private loginUrl = `${serverURI}/api/authorize`;
 
   login = (username: string, resultHandler: LoginUserResultHandler, errorHandler: ErrorHandler) => {
     const params = {
