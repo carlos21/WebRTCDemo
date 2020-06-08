@@ -147,11 +147,11 @@ export default class PeerClient {
     this.peerConnection.ontrack = this.onAddStream;
     this.peerConnection.onnegotiationneeded = this.onNegotiationNeeded;
 
-    // const audioTrack = this.getAudioTrack(localStream);
-    // if (audioTrack) {
-    //   this.peerConnection.addTrack(audioTrack, localStream);
-    //   console.log("added audioTrack");
-    // }
+    const audioTrack = this.getAudioTrack(localStream);
+    if (audioTrack) {
+      this.peerConnection.addTrack(audioTrack, localStream);
+      console.log("added audioTrack");
+    }
 
     const videoTrack = this.getVideoTrack(localStream);
     if (videoTrack) {
