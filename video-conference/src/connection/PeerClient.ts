@@ -60,9 +60,13 @@ export default class PeerClient {
     this.io.on("joined", (event: any) => {
       console.log(`Joined to room ${event.room}`);
       console.log(event.socketId);
+      console.log("event.instruction", event.instruction);
       this.socketId = event.socketId as string;
       this.fire(SocketEvent.JoinedRoom);
-      this.createOffer();
+
+      if (event.instruction === "send-offer") {
+        this.createOffer();
+      }
     });
 
     this.io.on('offer', (sdp: RTCSessionDescriptionInit) => {
@@ -103,10 +107,19 @@ export default class PeerClient {
       console.log('Custom error', response);
     });
 
-    this.io.on('error', (response: ErrorResponse) => {
+    this.io.on('error', (response: any) => {
+      // TODO casting validation if error
       const data = response.data as ErrorDataResponse;
-      if (data.show) {
+      if (data && data.show) {
         this.fire(SocketEvent.ConfirmNewSession, data.message);
+      }
+      
+      switch (response.status) {
+        case 3: {
+          this.io.disconnect();
+          this.fire(SocketEvent.Disconnected);
+          break;
+        }
       }
       console.log("error", response);
     });
@@ -176,6 +189,17 @@ export default class PeerClient {
 
   private getVideoTrack = (stream?: MediaStream): MediaStreamTrack | undefined => {
     return stream?.getTracks().find(track => track.kind === 'video')
+  }
+
+  setEnableVideo = (enabled: boolean) => {
+    const track = this.getVideoTrack(this.localStream);
+    if (track) {
+      track.enabled = enabled;
+
+      if (!enabled) {
+        track.stop();
+      }
+    }
   }
 
   private createOffer = () => {
@@ -255,6 +279,17 @@ export default class PeerClient {
 
   public authenticate = () => {
     this.io.connect();
+  }
+
+  public disconnect = () => {
+    this.io.disconnect();
+
+    if (this.peerConnection) {
+      this.peerConnection.close();
+      this.peerConnection.onicecandidate = null;
+      this.peerConnection.ontrack = null;
+      this.peerConnection.onnegotiationneeded = null;
+    }
   }
 
   public emit = (event: string, data: any) => {

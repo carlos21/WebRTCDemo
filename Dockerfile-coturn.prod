@@ -1,0 +1,6 @@
+FROM instrumentisto/coturn:latest
+
+COPY ./coturn/turnserver.conf /etc/coturn/turnserver.conf
+COPY ./certificates /etc/ssl/app/certs
+
+EXPOSE 3478/tcp 3478/udp 5349/tcp 5349/udp 49152-53236/udp

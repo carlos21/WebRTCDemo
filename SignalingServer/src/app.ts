@@ -13,6 +13,7 @@ import { User } from './storage/entity/User';
 import jwt, { TokenExpiredError } from 'jsonwebtoken';
 import TokenPayloadInterface from './models/TokenPayloadInterface';
 import SocketResponse from './responses/SocketResponse';
+import { Instruction } from './models/Instruction';
 
 export default class App {
   public app: Application;
@@ -79,6 +80,17 @@ export default class App {
     console.log("user: ", username);
   }
 
+  private emitError = (socket: Socket, status: number, message: string = '', show: boolean = false) => {
+    const json = { 
+      status: status, 
+      data: {
+        show: show,
+        message: message
+      } 
+    };
+    socket.emit('error', json);
+  }
+
   private listenSocketEvents = () => {
     this.io.on('connection', socket => {
       const auth_token = socket.handshake.query.auth_token;
@@ -87,16 +99,35 @@ export default class App {
       console.log(`auth_token`, auth_token);
       console.log(`room`, room);
       console.log(`Requesting to join to room`, room);
-      
-      socket.join(room, (error) => {
-        if (error) {
-          console.log('Error when joining', error);
-          
-          const json = { status: 2, data: {} };
-          socket.emit('error', json);
+
+      this.io.of('/').in(room).clients((error: any, clients: any) => {
+        if (error) throw error;
+        console.log(">>> number of clients", clients);
+
+        if (clients.length >= 2) {
+          this.emitError(socket, 3, "The meeting is full.", true);
           return;
         }
-        socket.emit('joined', { room: room, socketId: socket.id });
+
+        socket.join(room, (error) => {
+          if (error) {
+            console.log('Error when joining', error);
+            this.emitError(socket, 2);
+            return;
+          }
+
+          // if there's already a user in the room
+          let instruction = Instruction.None;
+          if (clients.length >= 1) {
+            instruction = Instruction.SendOffer;
+          }
+
+          socket.emit('joined', {
+            room: room,
+            instruction: instruction,
+            socketId: socket.id
+          });
+        });
       });
 
       socket.on('offer', (event: any) => {
@@ -137,6 +168,11 @@ export default class App {
       socket.on('mute-audio', (event: any) => {
         console.log(`mute-audio ${event.enabled}`);
         socket.to(event.room).emit('mute-audio', event.enabled);
+      });
+
+      socket.on('message', (event: any) => {
+        console.log(`message!!!!!! ${event.text}`);
+        socket.to(event.room).emit('message', event);
       });
 
       socket.conn.on('packet', async (packet: any) => {

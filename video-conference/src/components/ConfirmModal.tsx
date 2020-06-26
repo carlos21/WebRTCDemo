@@ -9,6 +9,7 @@ interface Props {
   title: string;
   body: string;
   visible: boolean;
+  alertType: 'confirm' | 'alert';
   onDismiss?: () => void;
   onConfirm: () => void;
   onCancel: () => void;
@@ -16,6 +17,17 @@ interface Props {
 
 export default class ConfirmModal extends Component<Props, State> {
 
+  renderCancel = () => {
+    if (this.props.alertType === 'alert') {
+      return null;
+    }
+    
+    return (
+      <Button variant="secondary" onClick={this.props.onCancel}>
+        Cancel
+      </Button>
+    )
+  }
   render = () => {
     return (
       <Modal animation={false} show={this.props.visible} onHide={this.props.onDismiss}>
@@ -24,11 +36,9 @@ export default class ConfirmModal extends Component<Props, State> {
         </Modal.Header>
         <Modal.Body>{this.props.body}</Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={this.props.onCancel}>
-            Close
-          </Button>
+          {this.renderCancel()}
           <Button variant="primary" onClick={this.props.onConfirm}>
-            Confirm
+            Ok
           </Button>
         </Modal.Footer>
       </Modal>

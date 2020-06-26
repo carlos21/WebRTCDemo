@@ -1,10 +1,10 @@
 import React, { Component, createRef } from 'react';
 import './conference.css';
 import { RouteComponentProps, StaticContext } from 'react-router';
-import * as constants from '../constants';
 import SocketContext from '../SocketContext';
 import PeerClient from '../connection/PeerClient';
 import SocketEvent from '../connection/SocketEvent';
+import { streamConstraints } from '../connection/Constants';
 
 interface MatchParams {
   room: string;
@@ -55,7 +55,14 @@ export default class ConferenceScreen extends Component<Props, State> {
     this.peer?.on(SocketEvent.ReceivedStream, this.onStreamReceived);
     this.peer?.on(SocketEvent.RemoteAudioMuted, this.onRemoteAudioMuted);
     this.peer?.on(SocketEvent.RemoteVideoMuted, this.onRemoteVideoMuted);
-    this.requestPermission();
+
+    if (this.state.isVideoEnabled) {
+      this.requestPermission();
+    }
+  }
+
+  componentWillUnmount = () => {
+    this.peer?.disconnect();
   }
 
   getAudioTrack = (stream?: MediaStream): MediaStreamTrack | undefined => {
@@ -92,7 +99,7 @@ export default class ConferenceScreen extends Component<Props, State> {
   }
 
   requestPermission = () => {
-    navigator.mediaDevices.getUserMedia(constants.streamConstraints)
+    navigator.mediaDevices.getUserMedia(streamConstraints)
       .then(stream => {
         this.localStream = stream;
         if (this.localVideo.current) {
@@ -117,7 +124,6 @@ export default class ConferenceScreen extends Component<Props, State> {
   }
 
   onToggleVideo = () => {
-    console.log("onToggleVideo");
     const enabled = !this.state.isVideoEnabled;
     this.setState({ isVideoEnabled: enabled });
 
@@ -125,9 +131,22 @@ export default class ConferenceScreen extends Component<Props, State> {
     if (track) {
       track.enabled = enabled;
       this.peer?.emit("mute-video", enabled);
+
+      if (!enabled) {
+        track.stop();
+      }
+    }
+
+    if (enabled) {
+      this.requestPermission();
     }
 
     // this.peer?.toggleVideo(enabled);
+  }
+
+  onHangUp = () => {
+    this.peer?.disconnect();
+    window.history.back();
   }
 
   // Render
@@ -158,17 +177,24 @@ export default class ConferenceScreen extends Component<Props, State> {
             <button
               // ref={this.muteAudioButton}
               className="roundButton"
-              style={{ marginRight: '15px' }}
+              style={{ marginRight: '25px' }}
               onClick={this.onToggleAudio}>
-              <i className={`fa fa-${this.state.isAudioEnabled ? "microphone" : "microphone-slash"}`} style={{ color: "white" }}></i>
+              <i className={`fa fa-${this.state.isAudioEnabled ? "microphone" : "microphone-slash"}`} style={{ color: "black" }}></i>
+            </button>
+
+            <button
+              // ref={this.muteAudioButton}
+              className="hangUp"
+              onClick={this.onHangUp}>
+              <i className={`fa fa-phone`} style={{ color: "white" }}></i>
             </button>
 
             <button
               // ref={this.muteVideoButton}
               className="roundButton"
-              style={{ marginLeft: '15px' }}
+              style={{ marginLeft: '25px' }}
               onClick={this.onToggleVideo}>
-              <i className={`fa fa-${this.state.isVideoEnabled ? "video" : "video-slash"}`} style={{ color: "white" }}></i>
+              <i className={`fa fa-${this.state.isVideoEnabled ? "video" : "video-slash"}`} style={{ color: "black" }}></i>
             </button>
           </div>
         </div>

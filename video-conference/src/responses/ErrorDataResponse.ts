@@ -1,4 +1,4 @@
 export default interface ErrorDataResponse {
-  show: boolean;
-  message: string;
+  show?: boolean;
+  message?: string;
 }

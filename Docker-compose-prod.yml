@@ -1,38 +1,38 @@
 version: '3'
 services:
 
-  # mongodb:
-  #   container_name: mongodb
-  #   image: darkzeratul64/webrtc-mongodb:latest
-  #   restart: always
-  #   volumes:
-  #     - ./mongo-volume:/data/db
-  #   ports:
-  #     - 27017:27017
-  #   networks:
-  #     - backend
+  mongodb:
+    container_name: mongodb
+    image: darkzeratul64/webrtc-mongodb:latest
+    restart: always
+    volumes:
+      - ./mongo-volume:/data/db
+    ports:
+      - 27017:27017
+    networks:
+      - backend
 
-  # redis:
-  #   container_name: redis
-  #   image: darkzeratul64/webrtc-redis:latest
-  #   ports:
-  #     - 6379:6379
-  #   networks:
-  #     - backend
+  redis:
+    container_name: redis
+    image: darkzeratul64/webrtc-redis:latest
+    ports:
+      - 6379:6379
+    networks:
+      - backend
 
-  # signaling_server_prod:
-  #   container_name: signaling_server_prod
-  #   image: darkzeratul64/webrtc-signalingserver:latest
-  #   ports:
-  #     - 9000:9000
-  #   links:
-  #     - mongodb
-  #     - redis
-  #   depends_on:
-  #     - mongodb
-  #     - redis
-  #   networks:
-  #     - backend
+  signaling_server_prod:
+    container_name: signaling_server_prod
+    image: darkzeratul64/webrtc-signalingserver:latest
+    ports:
+      - 9000:9000
+    links:
+      - mongodb
+      - redis
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - backend
 
   videoconference_app_prod:
     container_name: videoconference_app_prod
@@ -42,6 +42,23 @@ services:
     ports:
       - 80:80
       - 443:443
+
+  coturn: 
+    container_name: coturn
+    build:
+      context: .
+      dockerfile: ./Dockerfile-coturn.prod
+    restart: unless-stopped
+    # network_mode: host
+    ports:
+      - 5349:5349
+      - 3478:3478
+    command:
+      - -c /etc/coturn/turnserver.conf
+      - --log-file=stdout
+      - --external-ip=$$(detect-external-ip)
+    networks:
+      - backend
 
 networks:
     backend:

@@ -24,7 +24,12 @@ export default class LoginService {
       .then((response) => response.json())
       .then(json => {
         console.log("JSON RESPONSE", json);
-        resultHandler(json as TokenResponse);
+        const response = json as TokenResponse;
+        if (response.token) {
+          resultHandler(response);
+        } else {
+          errorHandler(Error(json.message ?? "Unexpected error"));
+        }
       })
       .catch(error => {
         console.log("RESPONSE ERROR", error);

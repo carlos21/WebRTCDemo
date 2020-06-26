@@ -1,7 +1,6 @@
 import React, { Component, createRef } from 'react';
 import PeerClient from '../connection/PeerClient';
-import * as constants from '../constants';
-import { config } from '../connection/Constants';
+import { config, streamConstraints } from '../connection/Constants';
 import { RouteComponentProps } from 'react-router';
 import SocketContext from '../SocketContext';
 import SocketEvent from '../connection/SocketEvent';
@@ -19,6 +18,11 @@ interface Props extends RouteComponentProps<MatchParams> {
 
 }
 
+enum ModalType {
+  Generic,
+  ConfirmSession
+}
+
 interface State {
   name: string;
   isVideoEnabled: boolean;
@@ -26,6 +30,7 @@ interface State {
   confirmTitle: string;
   confirmBody: string;
   confirmVisible: boolean;
+  alertType: 'confirm' | 'alert';
   cameraStatus: LoadingStatus;
   authorizationStatus: LoadingStatus;
 }
@@ -43,6 +48,7 @@ export default class EnterRoomScreen extends Component<Props, State> {
   muteVideoButton = createRef<HTMLButtonElement>();
   nameInputText = createRef<HTMLInputElement>();
   localStream?: MediaStream;
+  currentModal = ModalType.Generic;
 
   // Initialize
 
@@ -52,12 +58,13 @@ export default class EnterRoomScreen extends Component<Props, State> {
     this.state = {
       cameraStatus: LoadingStatus.Idle,
       authorizationStatus: LoadingStatus.Idle,
-      name: 'cduclos',
+      name: '',
       isVideoEnabled: true,
       isAudioEnabled: true,
       confirmTitle: 'Confirm',
       confirmBody: '',
-      confirmVisible: false
+      confirmVisible: false,
+      alertType: 'alert'
     }
 
     this.loginService = new LoginService();
@@ -78,19 +85,23 @@ export default class EnterRoomScreen extends Component<Props, State> {
     return this.localStream?.getTracks().find(track => track.kind === 'video')
   }
 
-  requestPermission = () => {
-    this.setState({ cameraStatus: LoadingStatus.Loading });
-    navigator.mediaDevices.getUserMedia(constants.streamConstraints)
-      .then(stream => {
-        this.localStream = stream;
-        this.localVideo.current!.srcObject = stream;
-        this.setState({ cameraStatus: LoadingStatus.Success });
-      })
-      .catch(error => {
-        console.log('An error occurred');
-        console.log(error);
-        this.setState({ cameraStatus: LoadingStatus.Error });
-      });
+  requestPermission = (): Promise<void> => {
+    return new Promise<void>((resolve, reject) => {
+      this.setState({ cameraStatus: LoadingStatus.Loading });
+      navigator.mediaDevices.getUserMedia(streamConstraints)
+        .then(stream => {
+          this.localStream = stream;
+          this.localVideo.current!.srcObject = stream;
+          this.setState({ cameraStatus: LoadingStatus.Success });
+          resolve();
+        })
+        .catch(error => {
+          console.log('An error occurred');
+          console.log(error);
+          this.setState({ cameraStatus: LoadingStatus.Error });
+          reject(error);
+        });
+    });
   }
 
   startConnection = (localStream: MediaStream, context: any, force: boolean) => {
@@ -105,14 +116,23 @@ export default class EnterRoomScreen extends Component<Props, State> {
       context.setPeer(this.peer);
     }, error => {
       console.log(":(  ", error);
+      this.currentModal = ModalType.Generic;
+      this.setState({
+        confirmTitle: "Error",
+        confirmBody: error.message,
+        confirmVisible: true,
+        alertType: 'alert'
+      });
     });
   }
 
   onShowConfirmNewSession = (payload: string) => {
+    this.currentModal = ModalType.ConfirmSession;
     this.setState({
       confirmTitle: "Confirm",
       confirmBody: payload,
-      confirmVisible: true
+      confirmVisible: true,
+      alertType: 'confirm'
     });
   }
 
@@ -141,8 +161,19 @@ export default class EnterRoomScreen extends Component<Props, State> {
   }
 
   onConfirmPressed = () => {
-    if (this.localStream) {
-      this.startConnection(this.localStream, this.context, true);
+    switch (this.currentModal) {
+      case ModalType.ConfirmSession: {
+        if (this.localStream) {
+          this.startConnection(this.localStream, this.context, true);
+        }
+        break;
+      }
+      case ModalType.Generic: {
+        this.setState({
+          confirmVisible: false,
+        });
+        break;
+      }
     }
   }
 
@@ -169,6 +200,14 @@ export default class EnterRoomScreen extends Component<Props, State> {
     const track = this.getVideoTrack();
     if (track) {
       track.enabled = enabled;
+
+      if (!enabled) {
+        track.stop();
+      }
+    }
+
+    if (enabled) {
+      this.requestPermission();
     }
   }
 
@@ -233,6 +272,7 @@ export default class EnterRoomScreen extends Component<Props, State> {
 
         <ConfirmModal
           title={this.state.confirmTitle}
+          alertType={this.state.alertType}
           body={this.state.confirmBody}
           onConfirm={this.onConfirmPressed}
           onCancel={this.onCancel}
@@ -277,7 +317,7 @@ const rightPanel: React.CSSProperties = {
 
 const video: React.CSSProperties = {
   border: '2px solid clear',
-  backgroundColor: 'whitesmoke',
+  backgroundColor: 'black',
   borderRadius: '12px',
   objectFit: 'cover'
 };

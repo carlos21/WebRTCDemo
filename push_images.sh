@@ -17,3 +17,6 @@ docker push darkzeratul64/webrtc-signalingserver:latest
 docker build -f Dockerfile-videoconference.prod -t darkzeratul64/webrtc-videoconference:latest .
 docker push darkzeratul64/webrtc-videoconference:latest
 
+docker build -f Dockerfile-coturn.prod -t darkzeratul64/webrtc-coturn:latest .
+docker push darkzeratul64/webrtc-coturn:latest
+

@@ -5,3 +5,4 @@ npm-debug.log
 .DS_Store
 mongo-volume/
 *.pem
+certificates/
