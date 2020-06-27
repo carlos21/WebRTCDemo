@@ -198,7 +198,9 @@ export default class ConferenceScreen extends Component<Props, State> {
             </button>
           </div>
         </div>
-        <div className="rightPanel"></div>
+        <div className="rightPanel">
+          
+        </div>
       </div>
     )
   }

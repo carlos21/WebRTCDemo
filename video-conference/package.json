@@ -25,6 +25,7 @@
     "env-cmd": "^10.1.0",
     "express": "^4.17.1",
     "express-favicon": "^2.0.1",
+    "moment": "^2.27.0",
     "path": "^0.12.7",
     "react": "^16.13.1",
     "react-bootstrap": "^1.0.1",

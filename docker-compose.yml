@@ -1,79 +1,79 @@
 version: '3'
 services:
 
-  # mongodb:
-  #   container_name: mongodb
-  #   build:
-  #     context: .
-  #     dockerfile: ./Dockerfile-mongodb
-  #   restart: always
-  #   volumes:
-  #     - ./SignalingServer/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
-  #     - ./mongo-volume:/data/db
-  #   ports:
-  #     - 27017:27017
-  #   networks:
-  #     - backend
-
-  # redis:
-  #   container_name: redis
-  #   build:
-  #     context: .
-  #     dockerfile: ./Dockerfile-redis
-  #   ports:
-  #     - 6379:6379
-  #   volumes:
-  #     - ./SignalingServer/config/redis.conf:/etc/redis/redis.conf
-  #   networks:
-  #     - backend
-
-  # signaling_server:
-  #   container_name: signaling_server
-  #   build:
-  #     context: .
-  #     dockerfile: ./Dockerfile-signalingserver.dev
-  #   volumes:
-  #     - ./SignalingServer:/usr/src/app
-  #   ports:
-  #     - 9000:9000
-  #   links:
-  #     - mongodb
-  #     - redis
-  #   depends_on:
-  #     - mongodb
-  #     - redis
-  #   networks:
-  #     - backend
-
-  # videoconference_app:
-  #   container_name: videoconference_app
-  #   stdin_open: true
-  #   # tty: true
-  #   build:
-  #     context: .
-  #     dockerfile: ./Dockerfile-videoconference.dev
-  #   volumes:
-  #     - ./video-conference:/usr/src/app
-  #   ports:
-  #     - 4000:4000
-  #   networks:
-  #     - backend
-
-  coturn: 
-    container_name: coturn
+  mongodb:
+    container_name: mongodb
     build:
       context: .
-      dockerfile: ./Dockerfile-coturn.prod
-    restart: unless-stopped
-    network_mode: host
+      dockerfile: ./Dockerfile-mongodb
+    restart: always
+    volumes:
+      - ./SignalingServer/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+      - ./mongo-volume:/data/db
     ports:
-      - 5349:5349
-      - 3478:3478
-    command:
-      - -c /etc/coturn/turnserver.conf
-      - --log-file=stdout
-      - --external-ip=$$(detect-external-ip)
+      - 27017:27017
+    networks:
+      - backend
+
+  redis:
+    container_name: redis
+    build:
+      context: .
+      dockerfile: ./Dockerfile-redis
+    ports:
+      - 6379:6379
+    volumes:
+      - ./SignalingServer/config/redis.conf:/etc/redis/redis.conf
+    networks:
+      - backend
+
+  signaling_server:
+    container_name: signaling_server
+    build:
+      context: .
+      dockerfile: ./Dockerfile-signalingserver.dev
+    volumes:
+      - ./SignalingServer:/usr/src/app
+    ports:
+      - 9000:9000
+    links:
+      - mongodb
+      - redis
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - backend
+
+  videoconference_app:
+    container_name: videoconference_app
+    stdin_open: true
+    # tty: true
+    build:
+      context: .
+      dockerfile: ./Dockerfile-videoconference.dev
+    volumes:
+      - ./video-conference:/usr/src/app
+    ports:
+      - 4000:4000
+    networks:
+      - backend
+
+  # coturn: 
+  #   container_name: coturn
+  #   build:
+  #     context: .
+  #     dockerfile: ./Dockerfile-coturn.prod
+  #   restart: unless-stopped
+  #   network_mode: host
+  #   ports:
+  #     - 5349:5349
+  #     - 3478:3478
+  #   command:
+  #     - -c /etc/coturn/turnserver.conf
+  #     - --log-file=stdout
+  #     - --external-ip=$$(detect-external-ip)
   
 
-# networks:
-#     backend:
+networks:
+    backend:
