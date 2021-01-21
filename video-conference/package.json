@@ -35,7 +35,7 @@
     "react-scripts": "3.4.1",
     "serve": "^11.3.0",
     "simple-peer": "^9.7.2",
-    "socket.io": "^2.3.0",
+    "socket.io": "^2.4.0",
     "socket.io-client": "^2.3.0",
     "typescript": "^3.8.3",
     "typestyle": "^2.1.0"
