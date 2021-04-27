@@ -28,7 +28,7 @@
     "jsonwebtoken": "^8.5.1",
     "mongodb": "^3.5.6",
     "promise-retry": "^1.1.1",
-    "redis": "^3.0.2",
+    "redis": "^3.1.1",
     "socket.io": "^2.3.0",
     "socketio-jwt-auth": "^0.1.0",
     "typeorm": "^0.2.24",
