@@ -25,7 +25,7 @@
     "express": "^4.17.1",
     "handy-redis": "^1.8.1",
     "helmet": "^3.22.0",
-    "jsonwebtoken": "^8.5.1",
+    "jsonwebtoken": "^9.0.0",
     "mongodb": "^3.5.6",
     "promise-retry": "^1.1.1",
     "redis": "^3.0.2",
